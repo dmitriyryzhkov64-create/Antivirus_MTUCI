@@ -9,6 +9,13 @@ add_executable(TrayApp WIN32
     src/main.cpp
 )
 
+add_executable(AntivirusMTUCIService
+    src/service/service.cpp
+    src/auth/auth_manager.cpp
+    src/http/http_client.cpp
+    ${RPC_GEN_DIR}/AntivirusRpc_s.c
+)
+
 target_compile_definitions(TrayApp PRIVATE UNICODE _UNICODE)
 
 target_link_libraries(TrayApp PRIVATE
@@ -16,3 +23,13 @@ target_link_libraries(TrayApp PRIVATE
     shell32
     gdi32
 )
+
+target_link_libraries(AntivirusMTUCIService PRIVATE
+    advapi32
+    user32
+    wtsapi32
+    userenv
+    rpcrt4
+    winhttp
+)
+
