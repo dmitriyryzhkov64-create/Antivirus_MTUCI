@@ -4,7 +4,7 @@
 
 #include "../common/service_names.h"
 #include "rpc_client.h"
-#include "AntivirusRpc_h.h"
+#include "AntivirusRpc.h"
 
 #pragma comment(lib, "Rpcrt4.lib")
 

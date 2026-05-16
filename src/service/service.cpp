@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 #include "../common/service_names.h"
-#include "AntivirusRpc_h.h"
+#include "AntivirusRpc.h"
 
 #pragma comment(lib, "Wtsapi32.lib")
 #pragma comment(lib, "Userenv.lib")

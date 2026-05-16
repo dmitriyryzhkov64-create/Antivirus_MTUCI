@@ -12,7 +12,7 @@ file(MAKE_DIRECTORY ${RPC_GEN_DIR})
 
 add_custom_command(
     OUTPUT
-        ${RPC_GEN_DIR}/AntivirusRpc_h.h
+        ${RPC_GEN_DIR}/AntivirusRpc.h
         ${RPC_GEN_DIR}/AntivirusRpc_c.c
         ${RPC_GEN_DIR}/AntivirusRpc_s.c
     COMMAND midl
@@ -26,7 +26,7 @@ add_custom_command(
 
 add_custom_target(generate_rpc
     DEPENDS
-        ${RPC_GEN_DIR}/AntivirusRpc_h.h
+        ${RPC_GEN_DIR}/AntivirusRpc.h
         ${RPC_GEN_DIR}/AntivirusRpc_c.c
         ${RPC_GEN_DIR}/AntivirusRpc_s.c
 )
