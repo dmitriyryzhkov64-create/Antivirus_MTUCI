@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(TrayApp WIN32
     src/main.cpp
-    src/resource.rc
 )
 
 target_compile_definitions(TrayApp PRIVATE UNICODE _UNICODE)
