@@ -1,0 +1,9 @@
+[
+    uuid(8F7B5A3D-72A8-4B1A-9C3D-1E7C9D7D21A1),
+    version(1.0),
+    pointer_default(unique)
+]
+interface AntivirusRpc
+{
+    void RpcStopService([in] handle_t binding);
+}
