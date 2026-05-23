@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
+
+  <Bundle
+    Name="Antivirus MTUCI Installer"
+    Manufacturer="MTUCI"
+    Version="1.0.0"
+    UpgradeCode="C4E72E55-9B4C-4876-9E37-5CE0F8D22001">
+
+    <BootstrapperApplication>
+      <bal:WixStandardBootstrapperApplication
+        LicenseUrl=""
+        Theme="hyperlinkLicense" />
+    </BootstrapperApplication>
+
+    <Chain>
+      <ExePackage
+        Id="VCRedist"
+        SourceFile="$(var.DependenciesDir)\vc_redist.x64.exe"
+        InstallArguments="/install /quiet /norestart"
+        RepairArguments="/repair /quiet /norestart"
+        UninstallArguments="/uninstall /quiet /norestart"
+        DetectCondition="VCRedistInstalled"
+        Permanent="yes" />
+
+      <MsiPackage
+        Id="AntivirusMsi"
+        SourceFile="$(var.MsiPath)" />
+    </Chain>
+  </Bundle>
+</Wix>

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="Antivirus MTUCI"
+    Manufacturer="MTUCI"
+    Version="1.0.0"
+    UpgradeCode="B7B83D2D-0E3A-44E0-B47B-49D3E4B9D001"
+    Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Antivirus MTUCI is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="MainFeature" Title="Antivirus MTUCI" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Antivirus MTUCI" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+
+      <Component Id="GuiComponent" Guid="F3C3E9E5-49A8-4964-A6B4-55A23F5D0001">
+        <File
+          Id="GuiExe"
+          Source="$(var.BuildDir)\AntivirusMTUCI.exe"
+          KeyPath="yes" />
+      </Component>
+
+      <Component Id="ServiceComponent" Guid="F3C3E9E5-49A8-4964-A6B4-55A23F5D0002">
+        <File
+          Id="ServiceExe"
+          Source="$(var.BuildDir)\AntivirusMTUCIService.exe"
+          KeyPath="yes" />
+
+        <ServiceInstall
+          Id="AntivirusMTUCIServiceInstall"
+          Type="ownProcess"
+          Name="AntivirusMTUCIService"
+          DisplayName="Antivirus MTUCI Service"
+          Description="Antivirus MTUCI background service"
+          Start="auto"
+          Account="LocalSystem"
+          ErrorControl="normal" />
+
+        <ServiceControl
+          Id="AntivirusMTUCIServiceControl"
+          Name="AntivirusMTUCIService"
+          Start="install"
+          Stop="both"
+          Remove="uninstall"
+          Wait="yes" />
+      </Component>
+
+      <Component Id="ConfigComponent" Guid="F3C3E9E5-49A8-4964-A6B4-55A23F5D0003">
+        <RegistryValue
+          Root="HKLM"
+          Key="Software\Antivirus MTUCI"
+          Name="InstallDir"
+          Type="string"
+          Value="[INSTALLFOLDER]"
+          KeyPath="yes" />
+      </Component>
+
+    </ComponentGroup>
+  </Package>
+</Wix>

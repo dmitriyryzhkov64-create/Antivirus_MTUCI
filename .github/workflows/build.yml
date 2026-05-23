@@ -1,8 +1,8 @@
-name: Windows CMake Build
+name: Windows CMake MSI Build
 
 on:
   push:
-    branches: [ main, feature/service-rpc, feature/auth-license, feature/av-engine ]
+    branches: [ main, feature/service-rpc, feature/auth-license, feature/av-engine, feature/installer-msi ]
   pull_request:
     branches: [ main ]
 
@@ -20,13 +20,63 @@ jobs:
       - name: Configure
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
-      - name: Build
+      - name: Build application
         run: cmake --build build --config Release
 
-      - name: Upload artifact
+      - name: Prepare installer directories
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path build\installer
+          New-Item -ItemType Directory -Force -Path build\deps
+
+      - name: Download VC++ Redistributable
+        shell: powershell
+        run: |
+          Invoke-WebRequest `
+            -Uri "https://aka.ms/vs/17/release/vc_redist.x64.exe" `
+            -OutFile "build\deps\vc_redist.x64.exe"
+
+      - name: Install WiX Toolset
+        shell: powershell
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          wix extension add WixToolset.Util.wixext/5.0.2
+          wix extension add WixToolset.Bal.wixext/5.0.2
+
+      - name: Build MSI
+        shell: powershell
+        run: |
+          wix build installer\Product.wxs `
+            -arch x64 `
+            -d BuildDir="$(Resolve-Path build\Release)" `
+            -o build\installer\AntivirusMTUCI.msi
+
+      - name: Build bootstrapper with VC++ dependency
+        shell: powershell
+        run: |
+          wix build installer\Bundle.wxs `
+            -ext WixToolset.Bal.wixext `
+            -arch x64 `
+            -d DependenciesDir="$(Resolve-Path build\deps)" `
+            -d MsiPath="$(Resolve-Path build\installer\AntivirusMTUCI.msi)" `
+            -o build\installer\AntivirusMTUCISetup.exe
+
+      - name: Upload application artifact
         uses: actions/upload-artifact@v4
         with:
           name: AntivirusMTUCI-Windows-x64
           path: |
             build/Release/AntivirusMTUCI.exe
             build/Release/AntivirusMTUCIService.exe
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AntivirusMTUCI-MSI
+          path: build/installer/AntivirusMTUCI.msi
+
+      - name: Upload bootstrapper artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AntivirusMTUCI-Bootstrapper
+          path: build/installer/AntivirusMTUCISetup.exe
