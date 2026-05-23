@@ -57,6 +57,8 @@ add_executable(AntivirusMTUCIService
     src/service/service.cpp
     src/auth/auth_manager.cpp
     src/http/http_client.cpp
+    src/av/av_database.cpp
+    src/av/av_engine.cpp
     ${RPC_GEN_DIR}/AntivirusRpc_s.c
 )
 

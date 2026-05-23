@@ -22,6 +22,9 @@
 #define ID_EDIT_ACTIVATION 3004
 #define ID_BUTTON_ACTIVATE 3005
 #define ID_BUTTON_LOGOUT 3006
+#define ID_EDIT_SCAN_PATH 3007
+#define ID_BUTTON_SCAN_FILE 3008
+#define ID_BUTTON_SCAN_DIR 3009
 
 #define ID_TIMER_LICENSE 4001
 
@@ -49,6 +52,12 @@ HWND g_activationEdit = nullptr;
 HWND g_activationButton = nullptr;
 
 HWND g_logoutButton = nullptr;
+HWND g_databaseLabel = nullptr;
+HWND g_scanPathLabel = nullptr;
+HWND g_scanPathEdit = nullptr;
+HWND g_scanFileButton = nullptr;
+HWND g_scanDirButton = nullptr;
+HWND g_scanResultLabel = nullptr;
 
 std::wstring g_currentUser;
 bool g_isAuthenticated = false;
@@ -351,7 +360,13 @@ void HideAllDynamicControls()
         g_activationLabel,
         g_activationEdit,
         g_activationButton,
-        g_logoutButton
+        g_logoutButton,
+        g_databaseLabel,
+        g_scanPathLabel,
+        g_scanPathEdit,
+        g_scanFileButton,
+        g_scanDirButton,
+        g_scanResultLabel
     };
 
     for (HWND control : controls)
@@ -369,7 +384,7 @@ void CreateUiControls(HWND hwnd)
         WS_VISIBLE | WS_CHILD,
         20,
         20,
-        520,
+        560,
         24,
         hwnd,
         nullptr,
@@ -530,6 +545,90 @@ void CreateUiControls(HWND hwnd)
         g_hInstance,
         nullptr
     );
+
+    g_databaseLabel = CreateWindowW(
+        L"STATIC",
+        L"",
+        WS_CHILD,
+        20,
+        300,
+        560,
+        24,
+        hwnd,
+        nullptr,
+        g_hInstance,
+        nullptr
+    );
+
+    g_scanPathLabel = CreateWindowW(
+        L"STATIC",
+        L"Путь для сканирования:",
+        WS_CHILD,
+        20,
+        330,
+        180,
+        24,
+        hwnd,
+        nullptr,
+        g_hInstance,
+        nullptr
+    );
+
+    g_scanPathEdit = CreateWindowW(
+        L"EDIT",
+        L"",
+        WS_CHILD | WS_BORDER | ES_AUTOHSCROLL,
+        200,
+        330,
+        360,
+        24,
+        hwnd,
+        reinterpret_cast<HMENU>(ID_EDIT_SCAN_PATH),
+        g_hInstance,
+        nullptr
+    );
+
+    g_scanFileButton = CreateWindowW(
+        L"BUTTON",
+        L"Сканировать файл",
+        WS_CHILD,
+        200,
+        365,
+        160,
+        30,
+        hwnd,
+        reinterpret_cast<HMENU>(ID_BUTTON_SCAN_FILE),
+        g_hInstance,
+        nullptr
+    );
+
+    g_scanDirButton = CreateWindowW(
+        L"BUTTON",
+        L"Сканировать папку",
+        WS_CHILD,
+        380,
+        365,
+        160,
+        30,
+        hwnd,
+        reinterpret_cast<HMENU>(ID_BUTTON_SCAN_DIR),
+        g_hInstance,
+        nullptr
+    );
+
+    g_scanResultLabel = CreateWindowW(
+        L"STATIC",
+        L"",
+        WS_CHILD,
+        20,
+        405,
+        580,
+        60,
+        hwnd,
+        nullptr,
+        g_hInstance,
+        nullptr
+    );
 }
 
 void RenderUi()
@@ -574,6 +673,30 @@ void RenderUi()
         L"Лицензия активна до: " + UnixTimeToString(g_licenseExpiresAt);
 
     SetWindowTextW(g_licenseLabel, licenseText.c_str());
+    
+    RpcAvDatabaseInfo dbInfo{};
+
+    if (RpcClientGetAvDatabaseInfo(&dbInfo) == RPC_OK)
+    {
+        std::wstring dbText =
+            L"Антивирусные базы: дата выпуска " +
+            dbInfo.releaseDate +
+            L", записей: " +
+            std::to_wstring(dbInfo.recordCount);
+
+        SetWindowTextW(g_databaseLabel, dbText.c_str());
+    }
+    else
+    {
+        SetWindowTextW(g_databaseLabel, L"Ошибка получения информации об антивирусных базах");
+    }
+
+    ShowWindow(g_databaseLabel, SW_SHOW);
+    ShowWindow(g_scanPathLabel, SW_SHOW);
+    ShowWindow(g_scanPathEdit, SW_SHOW);
+    ShowWindow(g_scanFileButton, SW_SHOW);
+    ShowWindow(g_scanDirButton, SW_SHOW);
+    ShowWindow(g_scanResultLabel, SW_SHOW);
 }
 
 void RefreshApplicationState()
@@ -648,23 +771,13 @@ void HandleLogin(HWND hwnd)
 
     int result = RpcClientLogin(login, password);
 
-    if (result == RPC_ERROR_NO_LICENSE)
+    if (result != RPC_OK)
     {
-        MessageBoxW(
-            g_hWnd,
-            L"Лицензия истекла или заблокирована",
-            APP_NAME,
-            MB_ICONWARNING
-        );
-    }
-    else if (result != RPC_OK)
-    {
-        MessageBoxW(
-            g_hWnd,
-            L"Ошибка активации продукта",
-            APP_NAME,
-            MB_ICONERROR
-        );
+        MessageBoxW(hwnd, L"Ошибка аутентификации", APP_NAME, MB_ICONERROR);
+        g_isAuthenticated = false;
+        g_hasLicense = false;
+        RenderUi();
+        return;
     }
 
     SetWindowTextW(g_passwordEdit, L"");
@@ -705,6 +818,87 @@ void HandleLogout()
     g_currentUser.clear();
 
     RenderUi();
+}
+
+void ShowScanResult(const RpcAvScanResult& result)
+{
+    std::wstring text;
+
+    if (result.isMalicious)
+    {
+        text =
+            L"Результат: ОБНАРУЖЕНА УГРОЗА\r\n"
+            L"Угроза: " + result.threatName +
+            L"\r\nПросканировано файлов: " + std::to_wstring(result.scannedFiles) +
+            L"\r\nНайдено угроз: " + std::to_wstring(result.detectedThreats);
+    }
+    else
+    {
+        text =
+            L"Результат: угроз не обнаружено\r\n"
+            L"Просканировано файлов: " + std::to_wstring(result.scannedFiles) +
+            L"\r\nНайдено угроз: " + std::to_wstring(result.detectedThreats);
+    }
+
+    SetWindowTextW(g_scanResultLabel, text.c_str());
+}
+
+void HandleScanFile(HWND hwnd)
+{
+    std::wstring path = GetWindowString(g_scanPathEdit);
+
+    if (path.empty())
+    {
+        MessageBoxW(hwnd, L"Введите путь к файлу", APP_NAME, MB_ICONWARNING);
+        return;
+    }
+
+    RpcAvScanResult result{};
+    int status = RpcClientScanFile(path, &result);
+
+    if (status == RPC_ERROR_NO_LICENSE)
+    {
+        MessageBoxW(hwnd, L"Нет активной лицензии", APP_NAME, MB_ICONWARNING);
+        RefreshApplicationState();
+        return;
+    }
+
+    if (status != RPC_OK)
+    {
+        MessageBoxW(hwnd, L"Ошибка сканирования файла", APP_NAME, MB_ICONERROR);
+        return;
+    }
+
+    ShowScanResult(result);
+}
+
+void HandleScanDirectory(HWND hwnd)
+{
+    std::wstring path = GetWindowString(g_scanPathEdit);
+
+    if (path.empty())
+    {
+        MessageBoxW(hwnd, L"Введите путь к папке", APP_NAME, MB_ICONWARNING);
+        return;
+    }
+
+    RpcAvScanResult result{};
+    int status = RpcClientScanDirectory(path, &result);
+
+    if (status == RPC_ERROR_NO_LICENSE)
+    {
+        MessageBoxW(hwnd, L"Нет активной лицензии", APP_NAME, MB_ICONWARNING);
+        RefreshApplicationState();
+        return;
+    }
+
+    if (status != RPC_OK)
+    {
+        MessageBoxW(hwnd, L"Ошибка сканирования папки", APP_NAME, MB_ICONERROR);
+        return;
+    }
+
+    ShowScanResult(result);
 }
 
 void StopServiceAndExit(HWND hwnd)
@@ -758,6 +952,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             HandleLogin(hwnd);
             return 0;
 
+        case ID_BUTTON_SCAN_FILE:
+            HandleScanFile(hwnd);
+            return 0;
+
+        case ID_BUTTON_SCAN_DIR:
+            HandleScanDirectory(hwnd);
+            return 0;
+        
         case ID_BUTTON_ACTIVATE:
             HandleActivation(hwnd);
             return 0;
@@ -835,8 +1037,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        640,
-        420,
+        700,
+        540,
         nullptr,
         CreateMainMenu(),
         hInstance,

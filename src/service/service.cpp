@@ -2,6 +2,8 @@
 #include <wtsapi32.h>
 #include <userenv.h>
 #include <rpc.h>
+#include "../av/av_database.h"
+#include "../av/av_engine.h"
 
 #include <vector>
 #include <string>
@@ -26,6 +28,8 @@ HANDLE g_rpcThread = nullptr;
 
 CRITICAL_SECTION g_processLock;
 std::vector<PROCESS_INFORMATION> g_guiProcesses;
+
+AvDatabase g_avDatabase;
 
 void* __RPC_USER midl_user_allocate(size_t size)
 {
@@ -369,6 +373,124 @@ extern "C" int RpcActivateProduct(
     return AuthActivateProduct(activationCode);
 }
 
+static wchar_t* RpcAllocString(const std::wstring& value)
+{
+    size_t size = value.size() + 1;
+
+    wchar_t* result = static_cast<wchar_t*>(
+        midl_user_allocate(size * sizeof(wchar_t))
+    );
+
+    if (!result)
+    {
+        return nullptr;
+    }
+
+    wcscpy_s(result, size, value.c_str());
+    return result;
+}
+
+extern "C" int RpcGetAvDatabaseInfo(
+    handle_t,
+    int* isLoaded,
+    hyper* recordCount,
+    wchar_t** releaseDate)
+{
+    if (!isLoaded || !recordCount || !releaseDate)
+    {
+        return RPC_ERROR_INTERNAL;
+    }
+
+    *isLoaded = g_avDatabase.IsLoaded() ? 1 : 0;
+    *recordCount = static_cast<hyper>(g_avDatabase.GetRecordCount());
+    *releaseDate = RpcAllocString(g_avDatabase.GetReleaseDate());
+
+    if (!*releaseDate)
+    {
+        return RPC_ERROR_INTERNAL;
+    }
+
+    return RPC_OK;
+}
+
+extern "C" int RpcScanFile(
+    handle_t,
+    const wchar_t* filePath,
+    int* isMalicious,
+    hyper* scannedFiles,
+    hyper* detectedThreats,
+    wchar_t** threatName)
+{
+    if (!filePath || !isMalicious || !scannedFiles || !detectedThreats || !threatName)
+    {
+        return RPC_ERROR_INTERNAL;
+    }
+
+    if (!AuthHasLicense())
+    {
+        return RPC_ERROR_NO_LICENSE;
+    }
+
+    if (!g_avDatabase.IsLoaded())
+    {
+        return RPC_ERROR_DATABASE_NOT_LOADED;
+    }
+
+    AvEngine engine(&g_avDatabase);
+    AvScanResult result = engine.ScanFile(filePath);
+
+    *isMalicious = result.isMalicious ? 1 : 0;
+    *scannedFiles = static_cast<hyper>(result.scannedFiles);
+    *detectedThreats = static_cast<hyper>(result.detectedThreats);
+    *threatName = RpcAllocString(result.threatName);
+
+    if (!*threatName)
+    {
+        return RPC_ERROR_INTERNAL;
+    }
+
+    return RPC_OK;
+}
+
+extern "C" int RpcScanDirectory(
+    handle_t,
+    const wchar_t* directoryPath,
+    int* isMalicious,
+    hyper* scannedFiles,
+    hyper* detectedThreats,
+    wchar_t** threatName)
+{
+    if (!directoryPath || !isMalicious || !scannedFiles || !detectedThreats || !threatName)
+    {
+        return RPC_ERROR_INTERNAL;
+    }
+
+    if (!AuthHasLicense())
+    {
+        return RPC_ERROR_NO_LICENSE;
+    }
+
+    if (!g_avDatabase.IsLoaded())
+    {
+        return RPC_ERROR_DATABASE_NOT_LOADED;
+    }
+
+    AvEngine engine(&g_avDatabase);
+    AvScanResult result = engine.ScanDirectory(directoryPath);
+
+    *isMalicious = result.isMalicious ? 1 : 0;
+    *scannedFiles = static_cast<hyper>(result.scannedFiles);
+    *detectedThreats = static_cast<hyper>(result.detectedThreats);
+    *threatName = RpcAllocString(result.threatName);
+
+    if (!*threatName)
+    {
+        return RPC_ERROR_INTERNAL;
+    }
+
+    return RPC_OK;
+}
+
 DWORD WINAPI ServiceControlHandler(
     DWORD control,
     DWORD eventType,
@@ -436,6 +558,7 @@ void WINAPI ServiceMain(DWORD, LPWSTR*)
     }
 
     AuthInitialize();
+    g_avDatabase.LoadMockDatabase();
 
     g_rpcThread = CreateThread(
         nullptr,

@@ -31,4 +31,29 @@ interface AntivirusRpc
         [in] handle_t binding,
         [in, string] const wchar_t* activationCode
     );
+
+    int RpcGetAvDatabaseInfo(
+        [in] handle_t binding,
+        [out] int* isLoaded,
+        [out] hyper* recordCount,
+        [out, string] wchar_t** releaseDate
+    );
+
+    int RpcScanFile(
+        [in] handle_t binding,
+        [in, string] const wchar_t* filePath,
+        [out] int* isMalicious,
+        [out] hyper* scannedFiles,
+        [out] hyper* detectedThreats,
+        [out, string] wchar_t** threatName
+    );
+
+    int RpcScanDirectory(
+        [in] handle_t binding,
+        [in, string] const wchar_t* directoryPath,
+        [out] int* isMalicious,
+        [out] hyper* scannedFiles,
+        [out] hyper* detectedThreats,
+        [out, string] wchar_t** threatName
+    );
 }

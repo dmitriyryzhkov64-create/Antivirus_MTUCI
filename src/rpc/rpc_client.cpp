@@ -34,18 +34,13 @@ static RPC_BINDING_HANDLE CreateBinding()
     );
 
     if (status != RPC_S_OK)
-    {
         return nullptr;
-    }
 
     status = RpcBindingFromStringBindingW(stringBinding, &binding);
-
     RpcStringFreeW(&stringBinding);
 
     if (status != RPC_S_OK)
-    {
         return nullptr;
-    }
 
     return binding;
 }
@@ -53,11 +48,8 @@ static RPC_BINDING_HANDLE CreateBinding()
 bool SendStopServiceRpc()
 {
     RPC_BINDING_HANDLE binding = CreateBinding();
-
     if (!binding)
-    {
         return false;
-    }
 
     bool ok = true;
 
@@ -72,38 +64,25 @@ bool SendStopServiceRpc()
     RpcEndExcept
 
     RpcBindingFree(&binding);
-
     return ok;
 }
 
-bool RpcClientGetCurrentUser(
-    bool* isAuthenticated,
-    std::wstring* username)
+bool RpcClientGetCurrentUser(bool* isAuthenticated, std::wstring* username)
 {
     if (!isAuthenticated || !username)
-    {
         return false;
-    }
 
     RPC_BINDING_HANDLE binding = CreateBinding();
-
     if (!binding)
-    {
         return false;
-    }
 
     int auth = 0;
     wchar_t* rpcUsername = nullptr;
-
     bool ok = true;
 
     RpcTryExcept
     {
-        int result = RpcGetCurrentUser(
-            binding,
-            &auth,
-            &rpcUsername
-        );
+        int result = RpcGetCurrentUser(binding, &auth, &rpcUsername);
 
         if (result != 0)
         {
@@ -112,22 +91,11 @@ bool RpcClientGetCurrentUser(
         else
         {
             *isAuthenticated = auth != 0;
-
-            if (rpcUsername)
-            {
-                *username = rpcUsername;
-            }
-            else
-            {
-                username->clear();
-            }
+            *username = rpcUsername ? rpcUsername : L"";
         }
 
         if (rpcUsername)
-        {
             midl_user_free(rpcUsername);
-            rpcUsername = nullptr;
-        }
     }
     RpcExcept(1)
     {
@@ -136,30 +104,20 @@ bool RpcClientGetCurrentUser(
     RpcEndExcept
 
     RpcBindingFree(&binding);
-
     return ok;
 }
 
-int RpcClientLogin(
-    const std::wstring& login,
-    const std::wstring& password)
+int RpcClientLogin(const std::wstring& login, const std::wstring& password)
 {
     RPC_BINDING_HANDLE binding = CreateBinding();
-
     if (!binding)
-    {
         return -1;
-    }
 
     int result = -1;
 
     RpcTryExcept
     {
-        result = RpcLogin(
-            binding,
-            login.c_str(),
-            password.c_str()
-        );
+        result = RpcLogin(binding, login.c_str(), password.c_str());
     }
     RpcExcept(1)
     {
@@ -168,18 +126,14 @@ int RpcClientLogin(
     RpcEndExcept
 
     RpcBindingFree(&binding);
-
     return result;
 }
 
 int RpcClientLogout()
 {
     RPC_BINDING_HANDLE binding = CreateBinding();
-
     if (!binding)
-    {
         return -1;
-    }
 
     int result = -1;
 
@@ -194,39 +148,25 @@ int RpcClientLogout()
     RpcEndExcept
 
     RpcBindingFree(&binding);
-
     return result;
 }
 
-int RpcClientGetLicenseInfo(
-    bool* hasLicense,
-    long long* expiresAtUnix)
+int RpcClientGetLicenseInfo(bool* hasLicense, long long* expiresAtUnix)
 {
     if (!hasLicense || !expiresAtUnix)
-    {
         return -1;
-    }
 
     RPC_BINDING_HANDLE binding = CreateBinding();
-
     if (!binding)
-    {
         return -1;
-    }
 
     int has = 0;
     hyper expires = 0;
-
     int result = -1;
 
     RpcTryExcept
     {
-        result = RpcGetLicenseInfo(
-            binding,
-            &has,
-            &expires
-        );
-
+        result = RpcGetLicenseInfo(binding, &has, &expires);
         *hasLicense = has != 0;
         *expiresAtUnix = static_cast<long long>(expires);
     }
@@ -237,28 +177,20 @@ int RpcClientGetLicenseInfo(
     RpcEndExcept
 
     RpcBindingFree(&binding);
-
     return result;
 }
 
-int RpcClientActivate(
-    const std::wstring& activationCode)
+int RpcClientActivate(const std::wstring& activationCode)
 {
     RPC_BINDING_HANDLE binding = CreateBinding();
-
     if (!binding)
-    {
         return -1;
-    }
 
     int result = -1;
 
     RpcTryExcept
     {
-        result = RpcActivateProduct(
-            binding,
-            activationCode.c_str()
-        );
+        result = RpcActivateProduct(binding, activationCode.c_str());
     }
     RpcExcept(1)
     {
@@ -267,6 +199,132 @@ int RpcClientActivate(
     RpcEndExcept
 
     RpcBindingFree(&binding);
+    return result;
+}
 
+int RpcClientGetAvDatabaseInfo(RpcAvDatabaseInfo* info)
+{
+    if (!info)
+        return -1;
+
+    RPC_BINDING_HANDLE binding = CreateBinding();
+    if (!binding)
+        return -1;
+
+    int loaded = 0;
+    hyper count = 0;
+    wchar_t* rpcDate = nullptr;
+    int result = -1;
+
+    RpcTryExcept
+    {
+        result = RpcGetAvDatabaseInfo(binding, &loaded, &count, &rpcDate);
+
+        info->isLoaded = loaded != 0;
+        info->recordCount = static_cast<unsigned long long>(count);
+        info->releaseDate = rpcDate ? rpcDate : L"";
+
+        if (rpcDate)
+            midl_user_free(rpcDate);
+    }
+    RpcExcept(1)
+    {
+        result = -1;
+    }
+    RpcEndExcept
+
+    RpcBindingFree(&binding);
+    return result;
+}
+
+int RpcClientScanFile(
+    const std::wstring& filePath,
+    RpcAvScanResult* resultData)
+{
+    if (!resultData)
+        return -1;
+
+    RPC_BINDING_HANDLE binding = CreateBinding();
+    if (!binding)
+        return -1;
+
+    int malicious = 0;
+    hyper scanned = 0;
+    hyper detected = 0;
+    wchar_t* rpcThreat = nullptr;
+    int result = -1;
+
+    RpcTryExcept
+    {
+        result = RpcScanFile(
+            binding,
+            filePath.c_str(),
+            &malicious,
+            &scanned,
+            &detected,
+            &rpcThreat
+        );
+
+        resultData->isMalicious = malicious != 0;
+        resultData->scannedFiles = static_cast<unsigned long long>(scanned);
+        resultData->detectedThreats = static_cast<unsigned long long>(detected);
+        resultData->threatName = rpcThreat ? rpcThreat : L"";
+
+        if (rpcThreat)
+            midl_user_free(rpcThreat);
+    }
+    RpcExcept(1)
+    {
+        result = -1;
+    }
+    RpcEndExcept
+
+    RpcBindingFree(&binding);
+    return result;
+}
+
+int RpcClientScanDirectory(
+    const std::wstring& directoryPath,
+    RpcAvScanResult* resultData)
+{
+    if (!resultData)
+        return -1;
+
+    RPC_BINDING_HANDLE binding = CreateBinding();
+    if (!binding)
+        return -1;
+
+    int malicious = 0;
+    hyper scanned = 0;
+    hyper detected = 0;
+    wchar_t* rpcThreat = nullptr;
+    int result = -1;
+
+    RpcTryExcept
+    {
+        result = RpcScanDirectory(
+            binding,
+            directoryPath.c_str(),
+            &malicious,
+            &scanned,
+            &detected,
+            &rpcThreat
+        );
+
+        resultData->isMalicious = malicious != 0;
+        resultData->scannedFiles = static_cast<unsigned long long>(scanned);
+        resultData->detectedThreats = static_cast<unsigned long long>(detected);
+        resultData->threatName = rpcThreat ? rpcThreat : L"";
+
+        if (rpcThreat)
+            midl_user_free(rpcThreat);
+    }
+    RpcExcept(1)
+    {
+        result = -1;
+    }
+    RpcEndExcept
+
+    RpcBindingFree(&binding);
     return result;
 }
