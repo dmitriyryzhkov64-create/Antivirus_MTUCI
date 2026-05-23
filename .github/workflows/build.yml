@@ -2,7 +2,7 @@ name: Windows CMake MSI Build
 
 on:
   push:
-    branches: [ main, feature/service-rpc, feature/auth-license, feature/av-engine, feature/installer-msi ]
+    branches: [ main, feature/service-rpc, feature/auth-license, feature/av-engine, feature/installer]
   pull_request:
     branches: [ main ]
 
