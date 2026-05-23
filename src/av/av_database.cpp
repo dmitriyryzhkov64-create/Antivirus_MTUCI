@@ -46,7 +46,7 @@ void AvDatabase::LoadMockDatabase()
         record.objectSignatureLength = static_cast<uint32_t>(signature.size());
         record.objectSignatureHash = SimpleHash(signature);
         record.offsetBegin = 0;
-        record.offsetEnd = 1024 * 1024;
+        record.offsetEnd = 64;
         record.objectType = AvObjectType::PE;
         record.avRecordSignature = { 0xAA, 0xBB, 0xCC };
         record.threatName = L"Test.EICAR.Mock";
