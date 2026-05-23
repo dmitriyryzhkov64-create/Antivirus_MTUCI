@@ -40,8 +40,7 @@ jobs:
         shell: powershell
         run: |
           dotnet tool install --global wix --version 5.0.2
-          wix extension add WixToolset.Util.wixext/5.0.2
-          wix extension add WixToolset.Bal.wixext/5.0.2
+
 
       - name: Build MSI
         shell: powershell
@@ -74,9 +73,3 @@ jobs:
         with:
           name: AntivirusMTUCI-MSI
           path: build/installer/AntivirusMTUCI.msi
-
-      - name: Upload bootstrapper artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: AntivirusMTUCI-Bootstrapper
-          path: build/installer/AntivirusMTUCISetup.exe
