@@ -62,7 +62,7 @@ void AvDatabase::LoadMockDatabase()
         record.objectSignatureLength = static_cast<uint32_t>(signature.size());
         record.objectSignatureHash = SimpleHash(signature);
         record.offsetBegin = 0;
-        record.offsetEnd = 1024 * 1024;
+        record.offsetEnd = 64;
         record.objectType = AvObjectType::JavaScript;
         record.avRecordSignature = { 0xDD, 0xEE, 0xFF };
         record.threatName = L"Script.JS.MockThreat";
