@@ -140,6 +140,13 @@ int AuthGetLicenseInfo(bool* hasLicense, long long* expiresAtUnix)
         return RPC_ERROR_NOT_AUTHENTICATED;
     }
 
+    if (g_state.hasLicense && g_state.licenseExpiresAt <= std::time(nullptr))
+    {
+        g_state.hasLicense = false;
+        g_state.licenseTicket.clear();
+        g_state.licenseExpiresAt = 0;
+    }
+
     *hasLicense = g_state.hasLicense;
     *expiresAtUnix = g_state.licenseExpiresAt;
 
@@ -173,6 +180,17 @@ int AuthActivateProduct(const std::wstring& activationCode)
         LeaveCriticalSection(&g_authLock);
         return RPC_ERROR_ACTIVATION_FAILED;
     }
+
+    if (activationCode == L"SHORT")
+{
+    g_state.hasLicense = true;
+    g_state.licenseTicket = L"short_lived_license_ticket";
+    g_state.licenseExpiresAt = std::time(nullptr) + 15;
+
+    LeaveCriticalSection(&g_authLock);
+
+    return RPC_OK;
+}
 
     g_state.hasLicense = true;
     g_state.licenseTicket = L"mock_license_ticket";
