@@ -92,22 +92,17 @@ int AuthGetCurrentUser(bool* isAuthenticated, std::wstring* username)
 
 int AuthLogin(const std::wstring& login, const std::wstring& password)
 {
-    // Mock для демонстрации без реального backend API.
     if (login != L"admin" || password != L"12345")
-    {
         return RPC_ERROR_INVALID_CREDENTIALS;
-    }
 
     EnterCriticalSection(&g_authLock);
 
     g_state.isAuthenticated = true;
     g_state.username = login;
-
     g_state.accessToken = L"mock_access_token";
     g_state.refreshToken = L"mock_refresh_token";
-
-    g_state.accessExpiresAt = std::time(nullptr) + 3600;
-    g_state.refreshExpiresAt = std::time(nullptr) + 7200;
+    g_state.accessExpiresAt = std::time(nullptr) + 60;
+    g_state.refreshExpiresAt = std::time(nullptr) + 3600;
 
     g_state.hasLicense = false;
     g_state.licenseTicket.clear();
@@ -117,6 +112,7 @@ int AuthLogin(const std::wstring& login, const std::wstring& password)
 
     return RPC_OK;
 }
+
 
 int AuthLogout()
 {
@@ -154,17 +150,28 @@ int AuthGetLicenseInfo(bool* hasLicense, long long* expiresAtUnix)
 
 int AuthActivateProduct(const std::wstring& activationCode)
 {
-    if (activationCode != L"MTUCI-2025")
-    {
-        return RPC_ERROR_ACTIVATION_FAILED;
-    }
-
     EnterCriticalSection(&g_authLock);
 
     if (!g_state.isAuthenticated)
     {
         LeaveCriticalSection(&g_authLock);
         return RPC_ERROR_NOT_AUTHENTICATED;
+    }
+
+    if (activationCode == L"EXPIRED")
+    {
+        g_state.hasLicense = false;
+        g_state.licenseTicket.clear();
+        g_state.licenseExpiresAt = 0;
+
+        LeaveCriticalSection(&g_authLock);
+        return RPC_ERROR_NO_LICENSE;
+    }
+
+    if (activationCode != L"MTUCI-2025")
+    {
+        LeaveCriticalSection(&g_authLock);
+        return RPC_ERROR_ACTIVATION_FAILED;
     }
 
     g_state.hasLicense = true;
@@ -175,6 +182,9 @@ int AuthActivateProduct(const std::wstring& activationCode)
 
     return RPC_OK;
 }
+
+
+
 
 bool AuthHasLicense()
 {
