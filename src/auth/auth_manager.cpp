@@ -17,15 +17,20 @@ static DWORD WINAPI RefreshWorker(LPVOID)
 
         if (g_state.isAuthenticated)
         {
+            // Mock-обновление токенов.
+            // Пользователь не должен повторно логиниться после истечения access token.
             g_state.accessExpiresAt = std::time(nullptr) + 3600;
             g_state.refreshExpiresAt = std::time(nullptr) + 7200;
         }
 
-        if (g_state.hasLicense)
+        if (g_state.hasLicense &&
+            g_state.licenseExpiresAt > 0 &&
+            g_state.licenseExpiresAt <= std::time(nullptr))
         {
-            // Mock-обновление license ticket.
-            // В реальном режиме здесь должен быть HTTPS-запрос статуса лицензии.
-            g_state.licenseExpiresAt = std::time(nullptr) + 30 * 24 * 60 * 60;
+            // Mock-сценарий: лицензия истекла или заблокирована сервером.
+            g_state.hasLicense = false;
+            g_state.licenseTicket.clear();
+            g_state.licenseExpiresAt = 0;
         }
 
         LeaveCriticalSection(&g_authLock);
