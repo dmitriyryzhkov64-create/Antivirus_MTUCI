@@ -648,13 +648,23 @@ void HandleLogin(HWND hwnd)
 
     int result = RpcClientLogin(login, password);
 
-    if (result != RPC_OK)
+    if (result == RPC_ERROR_NO_LICENSE)
     {
-        MessageBoxW(hwnd, L"Ошибка аутентификации", APP_NAME, MB_ICONERROR);
-        g_isAuthenticated = false;
-        g_hasLicense = false;
-        RenderUi();
-        return;
+        MessageBoxW(
+            g_hWnd,
+            L"Лицензия истекла или заблокирована",
+            APP_NAME,
+            MB_ICONWARNING
+        );
+    }
+    else if (result != RPC_OK)
+    {
+        MessageBoxW(
+            g_hWnd,
+            L"Ошибка активации продукта",
+            APP_NAME,
+            MB_ICONERROR
+        );
     }
 
     SetWindowTextW(g_passwordEdit, L"");
