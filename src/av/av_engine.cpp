@@ -3,6 +3,7 @@
 #include <fstream>
 #include <vector>
 #include <filesystem>
+#include <iterator>
 
 static uint64_t ReadPrefixFromBuffer(
     const std::vector<unsigned char>& data,
@@ -159,10 +160,14 @@ AvScanResult AvEngine::ScanFile(const std::wstring& filePath)
         return result;
     }
 
-    std::vector<unsigned char> data(
-        std::istreambuf_iterator<char>(file),
-        std::istreambuf_iterator<char>()
+    std::vector<char> rawData;
+    rawData.assign(
+    std::istreambuf_iterator<char>(file),
+    std::istreambuf_iterator<char>()
     );
+
+    std::vector<unsigned char> data;
+    data.assign(rawData.begin(), rawData.end());
 
     std::wstring threatName;
 
