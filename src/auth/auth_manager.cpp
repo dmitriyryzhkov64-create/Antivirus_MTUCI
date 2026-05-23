@@ -182,15 +182,15 @@ int AuthActivateProduct(const std::wstring& activationCode)
     }
 
     if (activationCode == L"SHORT")
-{
-    g_state.hasLicense = true;
-    g_state.licenseTicket = L"short_lived_license_ticket";
-    g_state.licenseExpiresAt = std::time(nullptr) + 15;
+    {
+        g_state.hasLicense = true;
+        g_state.licenseTicket = L"short_lived_license_ticket";
+        g_state.licenseExpiresAt = std::time(nullptr) + 15;
 
-    LeaveCriticalSection(&g_authLock);
+        LeaveCriticalSection(&g_authLock);
 
-    return RPC_OK;
-}
+        return RPC_OK;
+    }
 
     g_state.hasLicense = true;
     g_state.licenseTicket = L"mock_license_ticket";
