@@ -2,7 +2,7 @@ name: Windows CMake Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feature/service-rpc, feature/auth-license ]
   pull_request:
     branches: [ main ]
 
@@ -14,6 +14,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Clean build directory
+        run: cmake -E remove_directory build
+
       - name: Configure
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
@@ -23,5 +26,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TrayApp-Windows-x64
-          path: build/Release/TrayApp.exe
+          name: AntivirusMTUCI-Windows-x64
+          path: |
+            build/Release/AntivirusMTUCI.exe
+            build/Release/AntivirusMTUCIService.exe
